@@ -15,13 +15,17 @@ const logger = (...args) => {
 };
 
 const websiteFilters: DirectoryFeatures['filter'] = [
-  /*
   {
-    name: 'Language',
-    id: 'broadcaster_language',
-    values: locales,
+    name: 'Sort By',
+    id: 'sort',
+    values: [
+      { key: 'alphabetical', value: 'alphabetical' },
+      { key: 'date', value: 'date' },
+      { key: 'followers', value: 'followers' },
+      //{ key: 'relevant', value: 'relevant' },
+      { key: 'videos', value: 'videos' },
+    ],
   },
-  */
   /*
   {
     name: 'Audience',
@@ -167,7 +171,7 @@ class VimeoApi {
       ids: { id },
       name: data.name,
       description: data.description,
-      releaseDate: data.created_time,
+      //releaseDate: data.created_time,
       images: {
         poster: (picture && picture.link) || undefined,
       },
