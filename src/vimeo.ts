@@ -75,6 +75,7 @@ class VimeoApi {
     const filter = input.filter || {};
     const page: number = input.cursor === null ? 0 : <number>input.cursor || 0;
     return await this.get(`categories/${filter.category}/channels`, {
+      sort: filter.sort || 'date',
       per_page: limit,
       page: page > 0 ? page : 1,
     }).then(({ total, data }) => {
