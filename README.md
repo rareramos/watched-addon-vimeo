@@ -1,1 +1,2 @@
-# watched-addon-vimeo
+# watched-vimeo
+
