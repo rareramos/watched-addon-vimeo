@@ -26,7 +26,11 @@ export const vimeoAddon = createWorkerAddon({
 });
 
 vimeoAddon.registerActionHandler('directory', async (input, ctx) => {
-  if (input.id) {
+  if (input.filter && input.filter.category) {
+    return await vimeo.getChannelsByCategory(input);
+  } else if (input.filter && input.filter.channel) {
+    return await vimeo.getVideosByChannel(input);
+  } else if (input.id === 'channels') {
     return await vimeo.getChannels(input);
   } else if (input.search) {
     return await vimeo.searchChannels(input);
@@ -36,7 +40,7 @@ vimeoAddon.registerActionHandler('directory', async (input, ctx) => {
 });
 
 vimeoAddon.registerActionHandler('item', async (input, ctx) => {
-  return await vimeo.getChannel(input);
+  return await vimeo.getVideo(input);
 });
 
 vimeoAddon.registerActionHandler('source', async (input, ctx) => {

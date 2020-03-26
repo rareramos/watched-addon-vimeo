@@ -14,7 +14,7 @@ const logger = (...args) => {
   }
 };
 
-const websiteFilters: DirectoryFeatures['filter'] = [
+const channelFilters: DirectoryFeatures['filter'] = [
   {
     name: 'Sort By',
     id: 'sort',
@@ -22,23 +22,28 @@ const websiteFilters: DirectoryFeatures['filter'] = [
       { key: 'alphabetical', value: 'alphabetical' },
       { key: 'date', value: 'date' },
       { key: 'followers', value: 'followers' },
-      //{ key: 'relevant', value: 'relevant' },
       { key: 'videos', value: 'videos' },
     ],
   },
-  /*
+];
+
+const videoFilters: DirectoryFeatures['filter'] = [
   {
-    name: 'Audience',
-    id: 'audience',
+    name: 'Sort By',
+    id: 'sort',
     values: [
-      { value: 'All', key: '' },
-      ...['family', 'teen', '18+'].map(_ => ({
-        value: capitalize(_),
-        key: _,
-      })),
+      { key: 'added', value: 'added' },
+      { key: 'alphabetical', value: 'alphabetical' },
+      { key: 'comments', value: 'comments' },
+      { key: 'date', value: 'date' },
+      { key: 'default', value: 'default' },
+      { key: 'duration', value: 'duration' },
+      { key: 'likes', value: 'likes' },
+      { key: 'manual', value: 'manual' },
+      { key: 'modified_time', value: 'modified_time' },
+      { key: 'plays', value: 'plays' },
     ],
   },
-  */
 ];
 
 class VimeoApi {
@@ -46,40 +51,42 @@ class VimeoApi {
     const limit = 25;
     const filter = input.filter || {};
     const page: number = input.cursor === null ? 0 : <number>input.cursor || 0;
-    if (filter.category) {
-      return await this.get(`categories/${filter.category}/channels`, {
-        per_page: limit,
-        page: page > 0 ? page : 1,
-      }).then(({ total, data }) => {
-        const items = Array.from(data || []).map<ChannelItem>((channel: any) =>
-          this.convertChannel(channel)
-        );
-        const nextCursor = total > limit * page ? page + 1 : null;
-        console.log('nextCursor', nextCursor);
-        return {
-          nextCursor,
-          items,
-          features: {
-            filter: websiteFilters,
-          },
-        };
-      });
-    }
     return await this.get(`channels`, {
       ...filter,
       per_page: limit,
       page: page > 0 ? page : 1,
     }).then(({ total, data }) => {
-      const items = Array.from(data || []).map<ChannelItem>((channel: any) =>
+      const items = Array.from(data || []).map<DirectoryItem>((channel: any) =>
         this.convertChannel(channel)
       );
       const nextCursor = total > limit * page ? page + 1 : null;
-      console.log('nextCursor', nextCursor);
       return {
         nextCursor,
         items,
         features: {
-          filter: websiteFilters,
+          filter: channelFilters,
+        },
+      };
+    });
+  }
+
+  async getChannelsByCategory(input: DirectoryRequest) {
+    const limit = 25;
+    const filter = input.filter || {};
+    const page: number = input.cursor === null ? 0 : <number>input.cursor || 0;
+    return await this.get(`categories/${filter.category}/channels`, {
+      per_page: limit,
+      page: page > 0 ? page : 1,
+    }).then(({ total, data }) => {
+      const items = Array.from(data || []).map<DirectoryItem>((channel: any) =>
+        this.convertChannel(channel)
+      );
+      const nextCursor = total > limit * page ? page + 1 : null;
+      return {
+        nextCursor,
+        items,
+        features: {
+          filter: channelFilters,
         },
       };
     });
@@ -93,7 +100,7 @@ class VimeoApi {
       per_page: limit,
       page: page > 0 ? page : 1,
     }).then(({ total, data }) => {
-      const items = Array.from(data || []).map<ChannelItem>((channel: any) =>
+      const items = Array.from(data || []).map<DirectoryItem>((channel: any) =>
         this.convertChannel(channel)
       );
       const nextCursor = total > limit * page ? page + 1 : null;
@@ -101,7 +108,7 @@ class VimeoApi {
         nextCursor,
         items,
         features: {
-          filter: websiteFilters,
+          filter: channelFilters,
         },
       };
     });
@@ -125,19 +132,35 @@ class VimeoApi {
     });
   }
 
-  async getChannel({ ids }): Promise<ChannelItem> {
-    let channel: ChannelItem;
-    const data = await this.get(`channels/${ids.id}`);
-    let videos = await this.get(`channels/${ids.id}/videos`, {
-      direction: 'desc',
-      page: 1,
-      per_page: 1,
-      sort: 'added',
+  async getVideosByChannel(input: DirectoryRequest) {
+    const limit = 25;
+    const filter = input.filter || {};
+    const page: number = input.cursor === null ? 0 : <number>input.cursor || 0;
+    return await this.get(`channels/${filter.channel}/videos`, {
+      sort: filter.sort || 'default',
+      per_page: limit,
+      page: page > 0 ? page : 1,
+    }).then(({ total, data }) => {
+      const items = Array.from(data || []).map<ChannelItem>((video: any) =>
+        this.convertVideo(video)
+      );
+      const nextCursor = total > limit * page ? page + 1 : null;
+      return {
+        nextCursor,
+        items,
+        features: {
+          filter: videoFilters,
+        },
+      };
     });
-    let video = videos.data && videos.data[0];
-    if (video) {
-      let videoId = String(video.uri).replace('/videos/', '');
-      const result = await this.get(`https://player.vimeo.com/video/${videoId}/config`);
+  }
+
+  async getVideo({ ids }): Promise<ChannelItem> {
+    let video: ChannelItem;
+    let videoId = ids.id;
+    const data = await this.get(`videos/${ids.id}`);
+    if (data) {
+      const result = await this.get(`https://player.vimeo.com/video/${ids.id}/config`);
       let { request: { files: { progressive = [] } = {} } = {} } = result;
       progressive = orderBy(progressive, ['width'], ['desc']);
       const v = progressive[0];
@@ -145,27 +168,43 @@ class VimeoApi {
         data.videoUrl = v.url;
       }
     }
-    channel = this.convertChannel(data);
-    return channel;
+    video = this.convertVideo(data);
+    return video;
   }
 
   convertCategory(data: any): DirectoryItem {
     const id = data.uri.replace('/categories/', '');
     const picture = data.pictures.sizes.find(it => it.width === 640);
     const category: DirectoryItem = {
+      id,
       type: 'directory',
       name: data.name,
       images: { poster: (picture && picture.link) || undefined },
-      id: id,
       args: { filter: { category: id } },
     };
     return category;
   }
 
-  convertChannel(data: any): ChannelItem {
+  convertChannel(data: any): DirectoryItem {
     const id = data.uri.replace('/channels/', '');
     const picture = data.pictures.sizes.find(it => it.width === 640);
-    const channel: ChannelItem = {
+    const channel: DirectoryItem = {
+      id,
+      type: 'directory',
+      name: data.name,
+      description: data.description,
+      images: {
+        poster: (picture && picture.link) || undefined,
+      },
+      args: { filter: { channel: id } },
+    };
+    return channel;
+  }
+
+  convertVideo(data: any): ChannelItem {
+    const id = data.uri.replace('/videos/', '');
+    const picture = data.pictures.sizes.find(it => it.width === 640);
+    const video: ChannelItem = {
       id,
       type: 'channel',
       ids: { id },
@@ -178,22 +217,14 @@ class VimeoApi {
       sources: [],
     };
     if (data.videoUrl) {
-      channel.sources?.push({
+      video.sources?.push({
         id,
-        name: channel.name,
+        name: video.name,
         type: 'url',
         url: data.videoUrl,
       });
     }
-    if (data.externalUrl) {
-      channel.sources?.push({
-        id,
-        name: channel.name,
-        type: 'externalUrl',
-        url: data.externalUrl,
-      });
-    }
-    return channel;
+    return video;
   }
 
   async get(pathname = '', query = {}, options = {}) {
@@ -331,13 +362,3 @@ boot();
 */
 
 export default client;
-
-/*
-import VimeoClient from 'twitch';
-
-const clientId = process.env.TWITCH_CLIENT_ID as string;
-const clientSecret = process.env.TWITCH_SECRET_KEY as string;
-const twitchClient = VimeoClient.withClientCredentials(clientId, clientSecret);
-
-export default twitchClient;
-*/
