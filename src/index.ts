@@ -3,7 +3,7 @@ import vimeo from './vimeo';
 
 export const vimeoAddon = createWorkerAddon({
   id: 'vimeo',
-  name: 'Vimeo Categories',
+  name: 'Vimeo',
   version: '0.0.1',
   itemTypes: ['channel'],
   defaultDirectoryOptions: {
@@ -16,7 +16,7 @@ export const vimeoAddon = createWorkerAddon({
   dashboards: [
     {
       id: '',
-      name: 'Vimeo',
+      name: 'Vimeo Categories',
     },
     {
       id: 'channels',
