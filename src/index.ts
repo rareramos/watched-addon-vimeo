@@ -16,7 +16,7 @@ export const vimeoAddon = createWorkerAddon({
   dashboards: [
     {
       id: '',
-      name: 'Vimeo Categories',
+      name: 'Vimeo',
     },
     {
       id: 'channels',
